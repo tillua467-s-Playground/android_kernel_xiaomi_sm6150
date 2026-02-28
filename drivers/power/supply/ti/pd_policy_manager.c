@@ -258,6 +258,7 @@ static bool pd_get_bms_digest_verified(struct usbpd_pm *pdpm)
 }
 
 /* get pd pps charger verified result  */
+#ifndef CONFIG_MACH_XIAOMI_PHOENIX
 #if 0
 static bool pd_get_pps_charger_verified(struct usbpd_pm *pdpm)
 {
@@ -281,6 +282,7 @@ static bool pd_get_pps_charger_verified(struct usbpd_pm *pdpm)
 	else
 		return false;
 }
+#endif
 #endif
 
 
@@ -853,18 +855,24 @@ static void usbpd_pm_evaluate_src_caps(struct usbpd_pm *pdpm)
 	pdpm->apdo_max_curr = pm_config.min_adapter_curr_required;
 
 	for (i = 0; i < PDO_MAX_NUM; i++) {
-		if (pdpm->pdo[i].type == PD_SRC_PDO_TYPE_AUGMENTED
-			&& pdpm->pdo[i].pps && pdpm->pdo[i].pos) {
-			if (pdpm->pdo[i].max_volt_mv >= pdpm->apdo_max_volt
-					&& pdpm->pdo[i].curr_ma >= pdpm->apdo_max_curr
+                if (pdpm->pdo[i].type == PD_SRC_PDO_TYPE_AUGMENTED
+                        && pdpm->pdo[i].pps && pdpm->pdo[i].pos) {
+#ifdef CONFIG_MACH_XIAOMI_PHOENIX
+                        if (pdpm->pdo[i].max_volt_mv >= pdpm->apdo_max_volt
+                                        && pdpm->pdo[i].curr_ma >= pdpm->apdo_max_curr) {
+#else
+                        if (pdpm->pdo[i].max_volt_mv >= pdpm->apdo_max_volt
+                                        && pdpm->pdo[i].curr_ma >= pdpm->apdo_max_curr
 					&& pdpm->pdo[i].max_volt_mv <= APDO_MAX_VOLT) {
-				pdpm->apdo_max_volt = pdpm->pdo[i].max_volt_mv;
-				pdpm->apdo_max_curr = pdpm->pdo[i].curr_ma;
-				pdpm->apdo_selected_pdo = pdpm->pdo[i].pos;
-				pdpm->pps_supported = true;
-			}
-		}
-	}
+#endif
+
+            pdpm->apdo_max_volt = pdpm->pdo[i].max_volt_mv;
+            pdpm->apdo_max_curr = pdpm->pdo[i].curr_ma;
+            pdpm->apdo_selected_pdo = pdpm->pdo[i].pos;
+            pdpm->pps_supported = true;
+        }
+    }
+}
 
 	if (pdpm->pps_supported) {
 		pr_info("PPS supported, preferred APDO pos:%d, max volt:%d, current:%d\n",
@@ -962,7 +970,9 @@ static int usbpd_pm_fc2_charge_algo(struct usbpd_pm *pdpm)
 		ibus_lmt_change_timer = 0;
 	}
 
+	#ifndef CONFIG_MACH_XIAOMI_PHOENIX
 	ibus_limit = min(ibus_limit, pdpm->apdo_max_curr);
+	#endif
 
 	pr_info("chg_mode:%d, curr_ibus_limit:%d, ibus_limit:%d, bat_curr_lp_lmt:%d, effective_fcc_val:%d, apdo_max_curr:%d\n",
 			pdpm->cp.sc8551_charge_mode, curr_ibus_limit, ibus_limit,
@@ -1311,11 +1321,13 @@ static int usbpd_pm_sm(struct usbpd_pm *pdpm)
 		break;
 
 	case PD_PM_STATE_FC2_TUNE:
+#ifndef CONFIG_MACH_XIAOMI_PHOENIX
 #if 0
 		if (pdpm->cp.vbat_volt < pm_config.min_vbat_for_cp - 400) {
 			usbpd_pm_move_state(PD_PM_STATE_SW_ENTRY);
 			break;
 		}
+#endif
 #endif
 		usbpd_update_pps_status(pdpm);
 
@@ -1487,6 +1499,7 @@ static void cp_psy_change_work(struct work_struct *work)
 {
 	struct usbpd_pm *pdpm = container_of(work, struct usbpd_pm,
 					cp_psy_change_work);
+#ifndef CONFIG_MACH_XIAOMI_PHOENIX
 #if 0
 	union power_supply_propval val = {0,};
 	bool ac_pres = pdpm->cp.vbus_pres;
@@ -1501,6 +1514,7 @@ static void cp_psy_change_work(struct work_struct *work)
 
 	if (!ac_pres && pdpm->cp.vbus_pres)
 		schedule_delayed_work(&pdpm->pm_work, 0);
+#endif
 #endif
 	pdpm->psy_change_running = false;
 }
